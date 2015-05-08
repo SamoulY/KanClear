@@ -4,14 +4,14 @@
 #include <vector>
 #include <functional>  
 
-template<class eventarg>class KEvent
+template<class sendertype,class eventarg>class KEvent
 {
 public:
-	typedef std::function<void(void*,eventarg*)> eventFuncType;
+	typedef std::function<void(sendertype*, eventarg*)> eventFuncType;
 	void regist(eventFuncType);
 	void unregeist(eventFuncType);
-	void func(eventarg);
-	KEvent(void* p) :parent(p)
+	void func(eventarg&);
+	KEvent(sendertype* p) :parent(p)
 	{
 	}
 	KEvent& operator +=(eventFuncType func)
@@ -26,9 +26,9 @@ public:
 	}
 private:
 	std::vector<eventFuncType> m_funcs;
-	void* parent;
+	sendertype* parent;
 };
-template<class eventarg> void KEvent<eventarg>::func(eventarg args)
+template<class sendertype, class eventarg> void KEvent<sendertype, eventarg>::func(eventarg& args)
 {
 	int count = m_funcs.size();
 	for (int i = 0; i < count; i++)
@@ -36,11 +36,11 @@ template<class eventarg> void KEvent<eventarg>::func(eventarg args)
 		m_funcs.at(i)(parent,&args);
 	}
 }
-template<class eventarg> inline void KEvent<eventarg>::regist(eventFuncType func)
+template<class sendertype, class eventarg> void KEvent<sendertype, eventarg>::regist(eventFuncType func)
 {
 	m_funcs.push_back(func);
 }
-template<class eventarg> inline void KEvent<eventarg>::unregeist(eventFuncType func)
+template<class sendertype, class eventarg> void KEvent<sendertype, eventarg>::unregeist(eventFuncType func)
 {
 	m_funcs.erase(func);
 }

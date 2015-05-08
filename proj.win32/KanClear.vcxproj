@@ -141,8 +141,14 @@ xcopy /Y /Q "$(EngineRoot)external\websockets\prebuilt\win32\*.*" "$(OutDir)"</C
     <ClCompile Include="..\Classes\Block.cpp" />
     <ClCompile Include="..\Classes\Characters.cpp" />
     <ClCompile Include="..\Classes\ChessBoard.cpp" />
+    <ClCompile Include="..\Classes\CoinBank.cpp" />
     <ClCompile Include="..\Classes\GameLayer.cpp" />
     <ClCompile Include="..\Classes\HealthBar.cpp" />
+    <ClCompile Include="..\Classes\HealWorker.cpp" />
+    <ClCompile Include="..\Classes\Icon.cpp" />
+    <ClCompile Include="..\Classes\Player.cpp" />
+    <ClCompile Include="..\Classes\SkillButton.cpp" />
+    <ClCompile Include="..\Classes\Skills.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -150,9 +156,15 @@ xcopy /Y /Q "$(EngineRoot)external\websockets\prebuilt\win32\*.*" "$(OutDir)"</C
     <ClInclude Include="..\Classes\Block.h" />
     <ClInclude Include="..\Classes\Characters.h" />
     <ClInclude Include="..\Classes\ChessBoard.h" />
+    <ClInclude Include="..\Classes\CoinBank.h" />
     <ClInclude Include="..\Classes\EventHandler.h" />
     <ClInclude Include="..\Classes\GameLayer.h" />
     <ClInclude Include="..\Classes\HealthBar.h" />
+    <ClInclude Include="..\Classes\HealWorker.h" />
+    <ClInclude Include="..\Classes\Icon.h" />
+    <ClInclude Include="..\Classes\Player.h" />
+    <ClInclude Include="..\Classes\SkillButton.h" />
+    <ClInclude Include="..\Classes\Skills.h" />
     <ClInclude Include="main.h" />
   </ItemGroup>
   <ItemGroup>

@@ -2,82 +2,72 @@
 #define _GAMELAYER_H_
 
 #include "cocos2d.h"
-#include "Characters.h"
 
-class ChessBoardLayer;
+class ChessBoard;
 class HealthBar;
+class HealthZeroEventArg;
+class Block;
 class BlockClearEventArg;
 class BattleLayer;
-class Player :public Character
-{
-public:
-	int currentHp;
-	int currentMana;
-	int attacking;
-	Player(Character* c);
-	virtual void gameStart();
-	virtual HealthBar* getHealthBar();
-	virtual ChessBoardLayer* getChessBoard();
-	virtual cocos2d::Sprite* getIcon();
-protected:
-	Character* m_character;
-	HealthBar* m_hpbar;
-	ChessBoardLayer* m_controller;
-	cocos2d::Sprite* m_icon;
-	friend class BattleLayer;
-};
-class Player_AI :public Player
-{
-public:
-	Player_AI(Character* c) :Player(c), HardGrade(1), m_currentschedule(0)
-	{
+class CoinBank;
+class HealWorker;
+class SkillButton;
+class SkillExcuteEventArg;
+class Player;
+class Icon;
 
-	}
-	virtual void gameStart();
-	float HardGrade;
-protected:
-	int m_currentschedule;
-	virtual void move(float dt);
-};
 class BattleLayer :public cocos2d::Layer
 {
-protected:
-	void AttackPlayer(Player* target, int damage);
-	void HealPlayer(Player* target, int number);
-	void LockPlayer(Player* target, int number);
+
 };
-class BattleLayer_2P :public BattleLayer
+class BattleLayer_2P :public cocos2d::Layer
 {
 public:
 	static BattleLayer_2P* createWithPlayer(Player*, Player*);
 	void initLayout();
-	void gameStart()
-	{
-		m_playerA->gameStart();
-		m_playerB->gameStart();
-	}
+	virtual void gameStart();	
+	virtual void PlayerAttack(Player* attacker, Player* target, std::vector<Block*>& blocks);
+	virtual void PlayerLock(Player* locker, Player* target, std::vector<Block*>& blocks);
+	virtual void PlayerGetCoin(Player* target, std::vector<Block*>& blocks);
+	virtual void PlayerGetMana(Player* manar, Player* target, std::vector<Block*>& blocks);
+	virtual void PlayerHeal(Player* healer, Player* target, std::vector<Block*>& blocks);
 protected:
-	BattleLayer_2P(Player* A, Player* B) :m_playerA(A), m_playerB(B), m_background(0), m_VS(0), m_VSframe(0), m_attackanimeCountA(0), m_attackanimeCountB(0)
+	BattleLayer_2P(Player* A, Player* B) :m_playerA(A), m_playerB(B), m_background(0), m_VS(0), m_VSframe(0)
 	{
 	}	
-	int m_attackanimeCountA;
-	int m_attackanimeCountB;
-	void PlayerAttack(Player* attacker, Player* target, BlockClearEventArg* arg);
-	void PlayerLock(Player* locker, Player* target, BlockClearEventArg* arg);
 	virtual bool init() override;
+
+
 	Player* m_playerA;
 	Player* m_playerB;
 	HealthBar* m_hpbarA;
-	ChessBoardLayer* m_controllerA;
+	ChessBoard* m_controllerA;
 	HealthBar* m_hpbarB;
-	ChessBoardLayer* m_controllerB;
+	ChessBoard* m_controllerB;
+	CoinBank* m_bankA;
+	CoinBank* m_bankB;
+	HealWorker* m_healworkerA;
+	HealWorker* m_healworkerB;
+	SkillButton* m_skillbuttonA;
+	SkillButton* m_skillbuttonB;
+
+	cocos2d::Sprite* m_playerVDA;
+	cocos2d::Layer* m_playerVDblinkA;
+	cocos2d::Sprite* m_playerVDB;
+	cocos2d::Layer* m_playerVDblinkB;
 	cocos2d::Sprite* m_background;
 	cocos2d::Sprite* m_playerIconA;
 	cocos2d::Sprite* m_playerIconB;
 	cocos2d::Sprite* m_VS;
 	cocos2d::Sprite* m_VSframe;
 
-	virtual void BlockClearedEventHandle(void*, BlockClearEventArg*);
+	virtual void BlockClearedEventHandle(ChessBoard*, BlockClearEventArg*);
+	virtual void HealthZeroEventHandle(HealthBar*, HealthZeroEventArg*);
+	virtual void SkillExcuteEventHandle(SkillButton*, SkillExcuteEventArg*);
+	
+
+	virtual bool onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
+	virtual void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
 };
 
 

@@ -103,6 +103,8 @@ void Block::setMode(int mode)
 	case 1:break;
 	default:
 		type = BlockType::Key;
+		canLock = false;
+		canPress = true;
 		initWithSpriteFrameName(BlockTypeName[type]);
 		blendSP = Sprite::createWithSpriteFrameName("Spiral.png");
 		blendSP->setPosition(_contentSize.width / 2, _contentSize.height / 2);
@@ -115,22 +117,25 @@ void Block::setMode(int mode)
 }
 void Block::lock(float time)
 {
-	m_locked = true;
-	m_lockSP = Sprite::createWithSpriteFrameName("Locked.png");
-	m_lockSP->setPosition(_contentSize.width/2, _contentSize.height/2);
-	auto action = RepeatForever::create(Sequence::create(ScaleBy::create(0.4, 1.25), ScaleBy::create(0.4, 0.8), NULL));
-	action->setTag(99);
-	m_lockSP->runAction(action);
-	setColor(Color3B(150,150,150));
-	int count = _children.size();
-	for (int i = 0; i < count; i++)
+	if (!m_locked)
 	{
-		_children.at(i)->setColor(Color3B(150, 150, 150));
-		_children.at(i)->pauseSchedulerAndActions();
+		m_locked = true;
+		m_lockSP = Sprite::createWithSpriteFrameName("Locked.png");
+		m_lockSP->setPosition(_contentSize.width / 2, _contentSize.height / 2);
+		auto action = RepeatForever::create(Sequence::create(ScaleBy::create(0.4, 1.25), ScaleBy::create(0.4, 0.8), NULL));
+		action->setTag(99);
+		m_lockSP->runAction(action);
+		setColor(Color3B(150, 150, 150));
+		int count = _children.size();
+		for (int i = 0; i < count; i++)
+		{
+			_children.at(i)->setColor(Color3B(150, 150, 150));
+			_children.at(i)->pause();
+		}
+		addChild(m_lockSP, 15);
+		m_lockSP->setPosition(_contentSize.width * 4 / 5, _contentSize.height * 1 / 4);
+		scheduleOnce(schedule_selector(Block::autounlock), time);
 	}
-	addChild(m_lockSP, 15);
-	m_lockSP->setPosition(_contentSize.width * 4 / 5, _contentSize.height * 1 / 4);
-	scheduleOnce(schedule_selector(Block::autounlock), time);
 }
 void Block::unlock()
 {
@@ -143,7 +148,7 @@ void Block::unlock()
 		for (int i = 0; i < count; i++)
 		{
 			_children.at(i)->setColor(Color3B(255, 255, 255));
-			_children.at(i)->resumeSchedulerAndActions();
+			_children.at(i)->resume();
 		}
 	}),NULL));
 }

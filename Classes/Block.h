@@ -25,6 +25,8 @@ public:
 	int animeCount;
 	bool rowChecked;
 	bool colChecked;
+	bool canLock;
+	bool canPress;
 	int chaincount;
 	int x;
 	int y;
@@ -37,7 +39,7 @@ public:
 	void lock(float time);
 	void unlock();
 protected:
-	Block(BlockType type) : m_locked(false), selected(false), type(type), animeCount(0), rowChecked(false), colChecked(false), chaincount(0), m_mode(1), m_lockSP(0)
+	Block(BlockType type) : m_locked(false), canLock(true),canPress(false), selected(false), type(type), animeCount(0), rowChecked(false), colChecked(false), chaincount(0), m_mode(1), m_lockSP(0)
 	{
 		
 	}

@@ -3,9 +3,9 @@
 
 using namespace cocos2d;
 
-ChessBoardLayer* ChessBoardLayer::create(int row,int col)
+ChessBoard* ChessBoard::create(int row,int col)
 {
-	ChessBoardLayer* gl = new ChessBoardLayer(row,col);
+	ChessBoard* gl = new ChessBoard(row,col);
 	if (gl&&gl->init())
 	{
 		gl->autorelease();
@@ -17,24 +17,24 @@ ChessBoardLayer* ChessBoardLayer::create(int row,int col)
 	}
 	return gl;
 }
-bool ChessBoardLayer::init()
+bool ChessBoard::init()
 {
-	if (!Layer::init())
+	if (!Sprite::init())
 		return false;
-	this->addChild(explosionnode = ParticleBatchNode::create("stars.png", m_totalBlockCount), 12);
+	this->addChild(explosionnode = ParticleBatchNode::create("Resources/img/stars.png", m_totalBlockCount), 12);
 	backgroundnode = DrawNode::create();
 	this->addChild(backgroundnode);
 	boardernode = Node::create();
 	this->addChild(boardernode,11);
 	m_totalBlockCount = m_columnCount*m_rowCount;
-	m_blocks = new Block*[m_totalBlockCount];
+	Blocks = new Block*[m_totalBlockCount];
 	for (int i = 0; i < m_totalBlockCount; i++)
-		m_blocks[i] = NULL;
+		Blocks[i] = NULL;
 
 	return true;
 }
 
-void ChessBoardLayer::refreshBackGround()
+void ChessBoard::refreshBackGround()
 {
 	backgroundnode->clear();
 	backgroundnode->drawSolidRect(Point(0, 0), Point(_contentSize.width, _contentSize.height), Color4F(Color4B(0, 50, 80, 130)));
@@ -69,7 +69,7 @@ void ChessBoardLayer::refreshBackGround()
 	boardernode->addChild(tempS, 11);
 	tempS->setPosition(_contentSize.width, _contentSize.height/2);
 	tempS->setScale(sc);
-	tempS->setFlipX(true);
+	tempS->setFlippedX(true);
 	int i, j, count;
 	float temp;
 	const int linewidth = 20;
@@ -102,7 +102,7 @@ void ChessBoardLayer::refreshBackGround()
 	//backgroundnode->drawSolidRect(Point(0, 0), Point(m_Border, _contentSize.height), bordercolor);
 	//backgroundnode->drawSolidRect(Point(_contentSize.width, 0), Point(_contentSize.width - m_Border, _contentSize.height), bordercolor);
 }
-void ChessBoardLayer::start()
+void ChessBoard::start()
 {
 	srand(time(0) + rand());
 	int i, j;
@@ -115,7 +115,7 @@ void ChessBoardLayer::start()
 	}
 	scheduleUpdate();
 }
-Block* ChessBoardLayer::newBlock(int type)
+Block* ChessBoard::newBlock(int type)
 {
 	if (type == -1)
 	{
@@ -126,7 +126,7 @@ Block* ChessBoardLayer::newBlock(int type)
 		return Block::create(BlockType(type));
 	}
 }
-void ChessBoardLayer::addBlockWithDrop(Block* target, int x, int y)
+void ChessBoard::addBlockWithDrop(Block* target, int x, int y)
 {
 	target->x = x;
 	target->y = y;
@@ -138,12 +138,12 @@ void ChessBoardLayer::addBlockWithDrop(Block* target, int x, int y)
 	Point endposition = this->pointToClient(x, y);
 	target->setPosition(startposition);
 	target->animeCount++;
-	m_blocks[y*m_columnCount + x] = target;
-	target->runAction(Sequence::create(EaseSineOut::create((MoveTo::create(0.3, endposition))), CallFunc::create([target](){ target->animeCount--; }), NULL));
+	Blocks[y*m_columnCount + x] = target;
+	target->runAction(Sequence::create(EaseSineIn::create((MoveTo::create(0.3, endposition))), CallFunc::create([target](){ target->animeCount--; }), NULL));
 }
-void ChessBoardLayer::setContentSize(const Size& size)
+void ChessBoard::setContentSize(const Size& size)
 {
-	Layer::setContentSize(size);
+	Sprite::setContentSize(size);
 	if (m_columnCount <= 0 || m_rowCount <= 0)
 		return;
 	float blockwidth = (size.width * 100) / (m_columnCount * 100 + 2 * m_BorderP + m_MarginP*(m_columnCount - 1));
@@ -152,22 +152,22 @@ void ChessBoardLayer::setContentSize(const Size& size)
 	m_blockSize.width = (size.width - (m_columnCount - 1)*m_Margin - 2 * m_Border) / m_columnCount;
 	m_blockSize.height = (size.height - (m_rowCount - 1)*m_Margin - 2 * m_Border) / m_rowCount;
 }
-void ChessBoardLayer::setBlockSize(const Size& size)
+void ChessBoard::setBlockSize(const Size& size)
 {
 	m_Border = (int)(size.width*m_BorderP / 100);
 	m_Margin = (int)(size.width*m_MarginP / 100);
 	float width = size.width*m_columnCount + 2 * m_Border + m_Margin*(m_columnCount - 1);
 	float height = size.height*m_rowCount + 2 * m_Border + m_Margin*(m_rowCount - 1);
-	Layer::setContentSize(Size(width, height));
+	Sprite::setContentSize(Size(width, height));
 }
-Point ChessBoardLayer::pointToClient(const float& x, const float& y) const
+Point ChessBoard::pointToClient(const float& x, const float& y) const
 {
 	auto location = this->getPosition();
 	float xx = m_Border + (m_Margin + m_blockSize.width)*x + m_blockSize.width / 2;
 	float yy = m_Border + m_Margin + (m_Margin + m_blockSize.height)*y + m_blockSize.height / 2;
 	return Point(xx, yy);
 }
-bool ChessBoardLayer::autoCheck()
+bool ChessBoard::autoCheck()
 {
 	bool result = true;
 	int i;
@@ -175,25 +175,25 @@ bool ChessBoardLayer::autoCheck()
 	list.reserve(m_totalBlockCount);
 	for (i = 0; i < m_totalBlockCount; i++)
 	{
-		if (m_blocks[i] == NULL || m_blocks[i]->animeCount != 0)
+		if (Blocks[i] == NULL || Blocks[i]->animeCount != 0)
 		{
 			if (result)
 				result = false;
 			continue;
 		}
-		m_blocks[i]->chaincount = 0;
-		m_blocks[i]->rowChecked = false;
-		m_blocks[i]->colChecked = false;
+		Blocks[i]->chaincount = 0;
+		Blocks[i]->rowChecked = false;
+		Blocks[i]->colChecked = false;
 	}
 	for (i = 0; i < m_totalBlockCount; i++)
 	{
-		if (m_blocks[i] == NULL || m_blocks[i]->animeCount != 0)
+		if (Blocks[i] == NULL || Blocks[i]->animeCount != 0)
 		{
 			if (result)
 				result = false;
 			continue;
 		}
-		if (check(m_blocks[i], list))
+		if (check(Blocks[i], list))
 		{
 			if (result)
 				result = false;
@@ -202,7 +202,7 @@ bool ChessBoardLayer::autoCheck()
 	}
 	return result;
 }
-bool ChessBoardLayer::check(Block* target, std::vector<Block*>& list)
+bool ChessBoard::check(Block* target, std::vector<Block*>& list)
 {
 	list.clear();
 	list.push_back(target);
@@ -212,13 +212,13 @@ bool ChessBoardLayer::check(Block* target, std::vector<Block*>& list)
 		return true;
 	return false;
 }
-void ChessBoardLayer::clearList(std::vector<Block*>& list)
+void ChessBoard::clearList(std::vector<Block*>& list)
 {
 	int listcount = list.size();
 	if (listcount < 1)
 		return;
 	int i, j, maxcount = 0, totalcount = 0;
-	BlockClearEventArg eventarg(list[0]->type);
+	BlockClearEventArg eventarg;
 	Block* maxblock, *temp;
 	for (i = 0; i < listcount; i++)
 	{
@@ -234,14 +234,13 @@ void ChessBoardLayer::clearList(std::vector<Block*>& list)
 		for (i = 0; i < listcount; i++)
 		{
 			j = pointToIndex(list[i]->x, list[i]->y);
-			if (maxblock != list[i] && m_blocks[j] != NULL)
+			if (maxblock != list[i] && Blocks[j] != NULL)
 			{
-				temp = m_blocks[j];
-				m_blocks[j] = NULL;
+				temp = Blocks[j];
+				Blocks[j] = NULL;
 				maxblock->animeCount++;
 				totalcount += list[i]->getMode();
-				eventarg.locations.push_back(list[i]->getPosition());
-				eventarg.modes.push_back(list[i]->getMode());
+				eventarg.blocks.push_back(list[i]);
 				list[i]->runAction(Sequence::create((MoveTo::create(0.2, position)), CallFunc::create([temp, maxblock]{
 					maxblock->animeCount--;
 					temp->removeFromParent();
@@ -251,21 +250,19 @@ void ChessBoardLayer::clearList(std::vector<Block*>& list)
 		if (maxblock->isLocked())
 			maxblock->unlock();
 		maxblock->setMode(maxcount + 1);
-		eventarg.locations.push_back(maxblock->getPosition());
-		eventarg.modes.push_back(maxblock->getMode());
+		eventarg.blocks.push_back(maxblock);
 	}
 	else
 	{
 		for (i = 0; i < listcount; i++)
 		{
 			j = pointToIndex(list[i]->x, list[i]->y);
-			if (m_blocks[j] != NULL)
+			if (Blocks[j] != NULL)
 			{
-				temp = m_blocks[j];
-				m_blocks[j] = NULL;
+				temp = Blocks[j];
+				Blocks[j] = NULL;
 				totalcount += list[i]->getMode();
-				eventarg.locations.push_back(list[i]->getPosition());
-				eventarg.modes.push_back(list[i]->getMode());
+				eventarg.blocks.push_back(list[i]);
 				list[i]->runAction(Sequence::create(ScaleTo::create(0.2, 0, 0), CallFunc::create([temp]{
 					temp->removeFromParent();
 				}), NULL));
@@ -276,10 +273,9 @@ void ChessBoardLayer::clearList(std::vector<Block*>& list)
 		m_roadChecked = false;
 	if (m_help)
 		cancelhelp();
-	eventarg.totalcount = totalcount;
 	blockClearEvent.func(eventarg);
 }
-void ChessBoardLayer::checkCol(Block* target, std::vector<Block*>& list)
+void ChessBoard::checkCol(Block* target, std::vector<Block*>& list)
 {
 	int x = target->x;
 	int y = target->y;
@@ -293,19 +289,19 @@ void ChessBoardLayer::checkCol(Block* target, std::vector<Block*>& list)
 	for (i = y + 1; i < m_rowCount; i++)
 	{
 		j = pointToIndex(x, i);
-		if (m_blocks[j] == NULL || m_blocks[j]->animeCount != 0 || m_blocks[j]->colChecked || m_blocks[j]->type != targettype)
+		if (Blocks[j] == NULL || Blocks[j]->animeCount != 0 || Blocks[j]->colChecked || Blocks[j]->type != targettype)
 			break;
-		list.push_back(m_blocks[j]);
-		m_blocks[j]->colChecked = true;
+		list.push_back(Blocks[j]);
+		Blocks[j]->colChecked = true;
 		count++;
 	}
 	for (i = y - 1; i >= 0; i--)
 	{
 		j = pointToIndex(x, i);
-		if (m_blocks[j] == NULL || m_blocks[j]->animeCount != 0 || m_blocks[j]->colChecked || m_blocks[j]->type != targettype)
+		if (Blocks[j] == NULL || Blocks[j]->animeCount != 0 || Blocks[j]->colChecked || Blocks[j]->type != targettype)
 			break;
-		list.push_back(m_blocks[j]);
-		m_blocks[j]->colChecked = true;
+		list.push_back(Blocks[j]);
+		Blocks[j]->colChecked = true;
 		count++;
 	}
 	if (count < 2)
@@ -326,7 +322,7 @@ void ChessBoardLayer::checkCol(Block* target, std::vector<Block*>& list)
 		}
 	}
 }
-void ChessBoardLayer::checkRow(Block* target, std::vector<Block*>& list)
+void ChessBoard::checkRow(Block* target, std::vector<Block*>& list)
 {
 	int x = target->x;
 	int y = target->y;
@@ -340,19 +336,19 @@ void ChessBoardLayer::checkRow(Block* target, std::vector<Block*>& list)
 	for (i = x + 1; i < m_columnCount; i++)
 	{
 		j = pointToIndex(i, y);
-		if (m_blocks[j] == NULL || m_blocks[j]->animeCount != 0 || m_blocks[j]->rowChecked || m_blocks[j]->type != targettype)
+		if (Blocks[j] == NULL || Blocks[j]->animeCount != 0 || Blocks[j]->rowChecked || Blocks[j]->type != targettype)
 			break;
-		list.push_back(m_blocks[j]);
-		m_blocks[j]->rowChecked = true;
+		list.push_back(Blocks[j]);
+		Blocks[j]->rowChecked = true;
 		count++;
 	}
 	for (i = x - 1; i >= 0; i--)
 	{
 		j = pointToIndex(i, y);
-		if (m_blocks[j] == NULL || m_blocks[j]->animeCount != 0 || m_blocks[j]->rowChecked || m_blocks[j]->type != targettype)
+		if (Blocks[j] == NULL || Blocks[j]->animeCount != 0 || Blocks[j]->rowChecked || Blocks[j]->type != targettype)
 			break;
-		list.push_back(m_blocks[j]);
-		m_blocks[j]->rowChecked = true;
+		list.push_back(Blocks[j]);
+		Blocks[j]->rowChecked = true;
 		count++;
 	}
 	if (count < 2)
@@ -372,16 +368,16 @@ void ChessBoardLayer::checkRow(Block* target, std::vector<Block*>& list)
 		}
 	}
 }
-void ChessBoardLayer::update(float dt)
+void ChessBoard::update(float dt)
 {
 	fillBoard();
 	if (autoCheck() && !m_roadChecked&&!hasRoad())
 	{
-		destroyAll();
+		destroyAll(0.1);
 		m_roadChecked = false;
 	}
 }
-void ChessBoardLayer::fillBoard()
+void ChessBoard::fillBoard()
 {
 	int i, j, index, start;
 	Block* temp;
@@ -391,9 +387,9 @@ void ChessBoardLayer::fillBoard()
 		start = -1;
 		while (j < m_rowCount)
 		{
-			if (m_blocks[index = j*m_columnCount + i] != NULL && m_blocks[index]->animeCount != 0)
+			if (Blocks[index = j*m_columnCount + i] != NULL && Blocks[index]->animeCount != 0)
 				break;
-			if (start == -1 && m_blocks[index] == NULL)
+			if (start == -1 && Blocks[index] == NULL)
 				start = j;
 			j++;
 		}
@@ -402,14 +398,14 @@ void ChessBoardLayer::fillBoard()
 		for (j = start + 1; j < m_rowCount; j++)
 		{
 			index = j*m_columnCount + i;
-			if (m_blocks[index] != NULL)
+			if (Blocks[index] != NULL)
 			{
-				temp = m_blocks[index];
-				m_blocks[index] = NULL;
-				m_blocks[start*m_columnCount + i] = temp;
+				temp = Blocks[index];
+				Blocks[index] = NULL;
+				Blocks[start*m_columnCount + i] = temp;
 				temp->y = start;
 				temp->animeCount++;
-				temp->runAction(Sequence::create((MoveTo::create(0.2, pointToClient(i, start))), CallFunc::create([temp]{temp->animeCount--; }), NULL));
+				temp->runAction(Sequence::create((EaseSineIn::create(MoveTo::create(0.2, pointToClient(i, start)))), CallFunc::create([temp]{temp->animeCount--; }), NULL));
 				start++;
 			}
 		}
@@ -420,10 +416,10 @@ void ChessBoardLayer::fillBoard()
 		}
 	}
 }
-bool ChessBoardLayer::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_event)
+bool ChessBoard::onTouchBegan(Point location)
 {
 	int x, y, beginIndex;
-	Point location = touch->getLocation() - this->getPosition();
+	//Point location = touch->getLocation() - this->getPosition();
 	x = ((location.x - m_Border) / (m_blockSize.width + m_Margin));
 	y = ((location.y - m_Border) / (m_blockSize.height + m_Margin));
 	int endIndex = x + y*m_columnCount;
@@ -431,12 +427,12 @@ bool ChessBoardLayer::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused
 	{
 		unselect();
 	}
-	else if (t_beginX != -1 && t_beginY != -1 && ((abs(x - t_beginX) == 1 && y == t_beginY) || (abs(y - t_beginY) == 1 && x == t_beginX)) && m_blocks[endIndex] != NULL&&m_blocks[endIndex]->animeCount == 0 && m_blocks[beginIndex = t_beginX + t_beginY*m_columnCount] != NULL&&m_blocks[beginIndex]->animeCount == 0 && !m_blocks[beginIndex]->isLocked() && !m_blocks[endIndex]->isLocked())
+	else if (t_beginX != -1 && t_beginY != -1 && ((abs(x - t_beginX) == 1 && y == t_beginY) || (abs(y - t_beginY) == 1 && x == t_beginX)) && Blocks[endIndex] != NULL&&Blocks[endIndex]->animeCount == 0 && Blocks[beginIndex = t_beginX + t_beginY*m_columnCount] != NULL&&Blocks[beginIndex]->animeCount == 0 && !Blocks[beginIndex]->isLocked() && !Blocks[endIndex]->isLocked())
 	{
 		unselect();
 		trySwap(beginIndex, endIndex);
 	}
-	else if (m_blocks[endIndex] != NULL&&m_blocks[endIndex]->animeCount == 0 && m_blocks[endIndex]->type == BlockType::Key)
+	else if (Blocks[endIndex] != NULL&&Blocks[endIndex]->animeCount == 0 && Blocks[endIndex]->canPress)
 	{
 		unselect();
 		pressBlock(endIndex);
@@ -448,13 +444,13 @@ bool ChessBoardLayer::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused
 	}
 	return true;
 }
-void ChessBoardLayer::onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused_event)
+void ChessBoard::onTouchMoved(Point location)
 {
 	int beginIndex = t_beginX + t_beginY*m_columnCount;
-	if (t_beginX == -1 || t_beginY == -1 || m_blocks[beginIndex] == NULL || m_blocks[beginIndex]->animeCount != 0)
+	if (t_beginX == -1 || t_beginY == -1 || Blocks[beginIndex] == NULL || Blocks[beginIndex]->animeCount != 0)
 		return;
 	int x = -1, y = -1;
-	Point location = touch->getLocation() - this->getPosition();
+	//Point location = touch->getLocation() - this->getPosition();
 	double dx = location.x - t_beginPoint.x;
 	double dy = location.y - t_beginPoint.y;
 	if (abs(dx) > m_blockSize.width / 2 && abs(dy) > m_blockSize.height / 2)
@@ -487,39 +483,39 @@ void ChessBoardLayer::onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused
 		y = t_beginY - 1;
 	}
 	int endIndex = x + y*m_columnCount;
-	if (x < 0 || y < 0 || x >= m_columnCount || y >= m_rowCount || m_blocks[endIndex] == NULL || m_blocks[endIndex]->animeCount != 0)
+	if (x < 0 || y < 0 || x >= m_columnCount || y >= m_rowCount || Blocks[endIndex] == NULL || Blocks[endIndex]->animeCount != 0)
 	{
 		unselect();
 		return;
 	}
-	if (m_blocks[beginIndex]->isLocked() || m_blocks[endIndex]->isLocked())
+	if (Blocks[beginIndex]->isLocked() || Blocks[endIndex]->isLocked())
 		return;
 	unselect();
 	trySwap(beginIndex, endIndex);
 }
-void ChessBoardLayer::swapBlock(int a, int b, cocos2d::CallFunc* func)
+void ChessBoard::swapBlock(int a, int b, cocos2d::CallFunc* func)
 {
 	int temp;
 	Block* tempb;
-	temp = m_blocks[a]->x;
-	m_blocks[a]->x = m_blocks[b]->x;
-	m_blocks[b]->x = temp;
-	temp = m_blocks[a]->y;
-	m_blocks[a]->y = m_blocks[b]->y;
-	m_blocks[b]->y = temp;
-	tempb = m_blocks[a];
-	m_blocks[a] = m_blocks[b];
-	m_blocks[b] = tempb;
-	m_blocks[a]->animeCount++;
-	m_blocks[b]->animeCount++;
-	auto action = Spawn::create(TargetedAction::create(m_blocks[a], MoveTo::create(0.2, pointToClient(m_blocks[a]->x, m_blocks[a]->y))), MoveTo::create(0.2, pointToClient(m_blocks[b]->x, m_blocks[b]->y)), NULL);
-	m_blocks[b]->runAction(Sequence::create(action, CallFunc::create([a, b, this]
+	temp = Blocks[a]->x;
+	Blocks[a]->x = Blocks[b]->x;
+	Blocks[b]->x = temp;
+	temp = Blocks[a]->y;
+	Blocks[a]->y = Blocks[b]->y;
+	Blocks[b]->y = temp;
+	tempb = Blocks[a];
+	Blocks[a] = Blocks[b];
+	Blocks[b] = tempb;
+	Blocks[a]->animeCount++;
+	Blocks[b]->animeCount++;
+	auto action = Spawn::create(TargetedAction::create(Blocks[a],MoveTo::create(0.2, pointToClient(Blocks[a]->x, Blocks[a]->y))), MoveTo::create(0.2, pointToClient(Blocks[b]->x, Blocks[b]->y)), NULL);
+	Blocks[b]->runAction(Sequence::create(action, CallFunc::create([a, b, this]
 	{
-		m_blocks[a]->animeCount--;
-		m_blocks[b]->animeCount--;
+		Blocks[a]->animeCount--;
+		Blocks[b]->animeCount--;
 	}), func, NULL));
 }
-void ChessBoardLayer::afterSwap(int index_1, int index_2)
+void ChessBoard::afterSwap(int index_1, int index_2)
 {
 	int i;
 	bool success = false;
@@ -527,18 +523,18 @@ void ChessBoardLayer::afterSwap(int index_1, int index_2)
 	list.reserve(m_totalBlockCount);
 	for (i = 0; i < m_totalBlockCount; i++)
 	{
-		if (m_blocks[i] == NULL || m_blocks[i]->animeCount != 0)
+		if (Blocks[i] == NULL || Blocks[i]->animeCount != 0)
 			continue;
-		m_blocks[i]->chaincount = 0;
-		m_blocks[i]->rowChecked = false;
-		m_blocks[i]->colChecked = false;
+		Blocks[i]->chaincount = 0;
+		Blocks[i]->rowChecked = false;
+		Blocks[i]->colChecked = false;
 	}
-	if (m_blocks[index_1] != NULL && m_blocks[index_1]->animeCount == 0 && check(m_blocks[index_1], list))
+	if (Blocks[index_1] != NULL && Blocks[index_1]->animeCount == 0 && check(Blocks[index_1], list))
 	{
 		success = true;
 		clearList(list);
 	}
-	if (m_blocks[index_2] != NULL && m_blocks[index_2]->animeCount == 0 && check(m_blocks[index_2], list))
+	if (Blocks[index_2] != NULL && Blocks[index_2]->animeCount == 0 && check(Blocks[index_2], list))
 	{
 		success = true;
 		clearList(list);
@@ -546,45 +542,45 @@ void ChessBoardLayer::afterSwap(int index_1, int index_2)
 	if (!success)
 		swapBlock(index_1, index_2);
 }
-bool ChessBoardLayer::checkSwap(int index_1, int index_2)
+bool ChessBoard::checkSwap(int index_1, int index_2)
 {
 	int temp;
 	Block* tempb;
-	temp = m_blocks[index_1]->x;
-	m_blocks[index_1]->x = m_blocks[index_2]->x;
-	m_blocks[index_2]->x = temp;
-	temp = m_blocks[index_1]->y;
-	m_blocks[index_1]->y = m_blocks[index_2]->y;
-	m_blocks[index_2]->y = temp;
-	tempb = m_blocks[index_1];
-	m_blocks[index_1] = m_blocks[index_2];
-	m_blocks[index_2] = tempb;
+	temp = Blocks[index_1]->x;
+	Blocks[index_1]->x = Blocks[index_2]->x;
+	Blocks[index_2]->x = temp;
+	temp = Blocks[index_1]->y;
+	Blocks[index_1]->y = Blocks[index_2]->y;
+	Blocks[index_2]->y = temp;
+	tempb = Blocks[index_1];
+	Blocks[index_1] = Blocks[index_2];
+	Blocks[index_2] = tempb;
 	int i;
 	bool success = false;
 	std::vector<Block*> list;
 	list.reserve(m_totalBlockCount);
 	for (i = 0; i < m_totalBlockCount; i++)
 	{
-		if (m_blocks[i] == NULL || m_blocks[i]->animeCount != 0)
+		if (Blocks[i] == NULL || Blocks[i]->animeCount != 0)
 			continue;
-		m_blocks[i]->chaincount = 0;
-		m_blocks[i]->rowChecked = false;
-		m_blocks[i]->colChecked = false;
+		Blocks[i]->chaincount = 0;
+		Blocks[i]->rowChecked = false;
+		Blocks[i]->colChecked = false;
 	}
-	if (check(m_blocks[index_1], list) || check(m_blocks[index_2], list))
+	if (check(Blocks[index_1], list) || check(Blocks[index_2], list))
 		success = true;
-	temp = m_blocks[index_1]->x;
-	m_blocks[index_1]->x = m_blocks[index_2]->x;
-	m_blocks[index_2]->x = temp;
-	temp = m_blocks[index_1]->y;
-	m_blocks[index_1]->y = m_blocks[index_2]->y;
-	m_blocks[index_2]->y = temp;
-	tempb = m_blocks[index_1];
-	m_blocks[index_1] = m_blocks[index_2];
-	m_blocks[index_2] = tempb;
+	temp = Blocks[index_1]->x;
+	Blocks[index_1]->x = Blocks[index_2]->x;
+	Blocks[index_2]->x = temp;
+	temp = Blocks[index_1]->y;
+	Blocks[index_1]->y = Blocks[index_2]->y;
+	Blocks[index_2]->y = temp;
+	tempb = Blocks[index_1];
+	Blocks[index_1] = Blocks[index_2];
+	Blocks[index_2] = tempb;
 	return success;
 }
-bool ChessBoardLayer::hasRoad()
+bool ChessBoard::hasRoad()
 {
 	int x, y, index_1, index_2;
 	m_roadChecked = true;
@@ -619,28 +615,16 @@ bool ChessBoardLayer::hasRoad()
 	}
 	return false;
 }
-void ChessBoardLayer::destroyAll()
-{
-	Block* temp;
-	for (int i = 0; i < m_totalBlockCount; i++)
-	{
-		if (m_blocks[i] != NULL&&m_blocks[i]->animeCount == 0)
-		{
-			temp = m_blocks[i];
-			m_blocks[i] = NULL;
-			destroy(temp);
-		}
-	}
-}
-void ChessBoardLayer::destroy(Block* target)
+void ChessBoard::destroy(int i, float animetime)
 {
 	auto explosion = ParticleSystemQuad::create();
 	explosion->setEmitterMode(ParticleSystem::Mode::GRAVITY);
 	explosion->setPositionType(ParticleSystem::PositionType::FREE);
-	explosion->setSpeed(150);
+	float life;
+	explosion->setSpeed(200);
 	explosion->setSpeedVar(50);
-	explosion->setLife(0.5);
-	explosion->setLifeVar(0.2);
+	explosion->setLife(life = animetime);
+	explosion->setLifeVar(0.3*life);
 	explosion->setAngle(90);
 	explosion->setAngleVar(360);
 	explosion->setStartSize(25);
@@ -649,8 +633,8 @@ void ChessBoardLayer::destroy(Block* target)
 	explosion->setEndSizeVar(0);
 	explosion->setBlendFunc({ GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA });
 	explosion->setEmissionRate(50);
-	explosion->setTotalParticles(50);
-	explosion->setDuration(0.1);
+	explosion->setTotalParticles(15);
+	explosion->setDuration(animetime);
 	explosion->setAutoRemoveOnFinish(true);
 	explosion->setTexture(explosionnode->getTexture());
 	explosion->setStartColor(Color4F(Color4B(255, 255, 255, 255)));
@@ -658,6 +642,8 @@ void ChessBoardLayer::destroy(Block* target)
 	explosion->setEndColor(Color4F(Color4B(255, 255, 255, 0)));
 	explosion->setEndColorVar(Color4F(Color4B(0, 0, 0, 0)));
 	explosionnode->addChild(explosion);
+	auto target = Blocks[i];
+	Blocks[i] = NULL;
 	auto size = target->getContentSize();
 	auto position = target->getPosition();
 	explosion->setPosition(position.x, position.y);
@@ -665,8 +651,18 @@ void ChessBoardLayer::destroy(Block* target)
 		target->removeFromParent();
 	}), NULL));
 }
+void ChessBoard::destroyAll(float animetime)
+{
+	for (int i = 0; i < m_totalBlockCount; i++)
+	{
+		if (Blocks[i] != NULL&&Blocks[i]->animeCount == 0)
+		{
+			destroy(i, animetime);
+		}
+	}
+}
 
-void ChessBoardLayer::select(int x, int y)
+void ChessBoard::select(int x, int y)
 {
 	t_beginX = x;
 	t_beginY = y;
@@ -680,7 +676,7 @@ void ChessBoardLayer::select(int x, int y)
 	FiniteTimeAction* temp;
 	selectSprite->runAction(RepeatForever::create(Sequence::create(temp = ScaleBy::create(0.7, 1.1), temp->reverse(), NULL)));
 }
-void ChessBoardLayer::unselect()
+void ChessBoard::unselect()
 {
 	t_beginX = -1;
 	t_beginY = -1;
@@ -690,14 +686,14 @@ void ChessBoardLayer::unselect()
 		selectSprite = NULL;
 	}
 }
-inline void ChessBoardLayer::help(int index_1, int index_2)
+void ChessBoard::help(int index_1, int index_2)
 {
 	if (!isScheduled("help"))
 	{
-		scheduleOnce(std::bind(&ChessBoardLayer::schdulehelp, this, index_1, index_2, std::placeholders::_1), m_helpTime, "help");
+		scheduleOnce(std::bind(&ChessBoard::schdulehelp, this, index_1, index_2, std::placeholders::_1), m_helpTime, "help");
 	}
 }
-void ChessBoardLayer::schdulehelp(int index_1, int index_2, float dt)
+void ChessBoard::schdulehelp(int index_1, int index_2, float dt)
 {
 	Point p1 = indexToPoint(index_1);
 	Point p2 = indexToPoint(index_2);
@@ -708,7 +704,7 @@ void ChessBoardLayer::schdulehelp(int index_1, int index_2, float dt)
 	helpSprite->setPosition(pointToClient(((float)p1.x + p2.x) / 2, ((float)p1.y + p2.y) / 2));
 	helpSprite->runAction(RepeatForever::create(RotateBy::create(6, 360)));
 }
-void ChessBoardLayer::cancelhelp()
+void ChessBoard::cancelhelp()
 {
 	if (isScheduled("help"))
 		this->unschedule("help");
@@ -718,69 +714,69 @@ void ChessBoardLayer::cancelhelp()
 		helpSprite = NULL;
 	}
 }
-int ChessBoardLayer::checkSwap(int index_1, int index_2, int* cfs)
+int ChessBoard::checkSwap(int index_1, int index_2, int* cfs)
 {
-	if (m_blocks[index_1] == NULL || m_blocks[index_2] == NULL || m_blocks[index_1]->animeCount != 0 || m_blocks[index_2]->animeCount != 0)
+	if (Blocks[index_1] == NULL || Blocks[index_2] == NULL || Blocks[index_1]->animeCount != 0 || Blocks[index_2]->animeCount != 0)
 		return -1;
 	Block* tempb;
 	int temp,score = 0;
 	bool result = false;
-	temp = m_blocks[index_1]->x;
-	m_blocks[index_1]->x = m_blocks[index_2]->x;
-	m_blocks[index_2]->x = temp;
-	temp = m_blocks[index_1]->y;
-	m_blocks[index_1]->y = m_blocks[index_2]->y;
-	m_blocks[index_2]->y = temp;
-	tempb = m_blocks[index_1];
-	m_blocks[index_1] = m_blocks[index_2];
-	m_blocks[index_2] = tempb;
+	temp = Blocks[index_1]->x;
+	Blocks[index_1]->x = Blocks[index_2]->x;
+	Blocks[index_2]->x = temp;
+	temp = Blocks[index_1]->y;
+	Blocks[index_1]->y = Blocks[index_2]->y;
+	Blocks[index_2]->y = temp;
+	tempb = Blocks[index_1];
+	Blocks[index_1] = Blocks[index_2];
+	Blocks[index_2] = tempb;
 	int i;
 	bool success = false;
 	std::vector<Block*> list;
 	list.reserve(m_totalBlockCount);
 	for (i = 0; i < m_totalBlockCount; i++)
 	{
-		if (m_blocks[i] == NULL || m_blocks[i]->animeCount != 0)
+		if (Blocks[i] == NULL || Blocks[i]->animeCount != 0)
 			continue;
-		m_blocks[i]->chaincount = 0;
-		m_blocks[i]->rowChecked = false;
-		m_blocks[i]->colChecked = false;
+		Blocks[i]->chaincount = 0;
+		Blocks[i]->rowChecked = false;
+		Blocks[i]->colChecked = false;
 	}
-	if (check(m_blocks[index_1], list))
+	if (check(Blocks[index_1], list))
 	{
 		if (!result)
 			result = true;
 		score += list.size()*cfs[list[0]->type];
 	}
-	if (check(m_blocks[index_2], list))
+	if (check(Blocks[index_2], list))
 	{
 		if (!result)
 			result = true;
 		score += list.size()*cfs[list[0]->type];
 	}
-	temp = m_blocks[index_1]->x;
-	m_blocks[index_1]->x = m_blocks[index_2]->x;
-	m_blocks[index_2]->x = temp;
-	temp = m_blocks[index_1]->y;
-	m_blocks[index_1]->y = m_blocks[index_2]->y;
-	m_blocks[index_2]->y = temp;
-	tempb = m_blocks[index_1];
-	m_blocks[index_1] = m_blocks[index_2];
-	m_blocks[index_2] = tempb;
+	temp = Blocks[index_1]->x;
+	Blocks[index_1]->x = Blocks[index_2]->x;
+	Blocks[index_2]->x = temp;
+	temp = Blocks[index_1]->y;
+	Blocks[index_1]->y = Blocks[index_2]->y;
+	Blocks[index_2]->y = temp;
+	tempb = Blocks[index_1];
+	Blocks[index_1] = Blocks[index_2];
+	Blocks[index_2] = tempb;
 	return result?score:-1;
 }
 
-void ChessBoardLayer::pressBlock(int index)
+void ChessBoard::pressBlock(int index)
 {
-	Block* temp = m_blocks[index];
+	Block* temp = Blocks[index];
 	switch (temp->type)
 	{
 	case BlockType::Key:
-		m_blocks[index] = NULL;
+		Blocks[index] = NULL;
 		for (int i = 0; i < m_totalBlockCount; i++)
 		{
-			if (m_blocks[i] != NULL&&m_blocks[i]->isLocked())
-				m_blocks[i]->unlock();
+			if (Blocks[i] != NULL&&Blocks[i]->isLocked())
+				Blocks[i]->unlock();
 		}
 		temp->runAction(Sequence::create(ScaleTo::create(0.2, 0, 0), CallFunc::create([temp]{
 			temp->removeFromParent();
@@ -795,40 +791,30 @@ void ChessBoardLayer::pressBlock(int index)
 	}
 	
 }
-void ChessBoardLayer::allowTouch()
-{
-	auto touchlistener = EventListenerTouchOneByOne::create();
-	touchlistener->onTouchBegan = CC_CALLBACK_2(ChessBoardLayer::onTouchBegan, this);
-	touchlistener->onTouchMoved = CC_CALLBACK_2(ChessBoardLayer::onTouchMoved, this);
-	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchlistener, this);
-}
-void ChessBoardLayer::banTouch()
-{
-	_eventDispatcher->removeEventListenersForTarget(this);
-}
-void ChessBoardLayer::allowHelp(float time)
+
+void ChessBoard::allowHelp(float time)
 {
 	m_help = true;
 	m_helpTime = time;
 }
-void ChessBoardLayer::banHelp()
+void ChessBoard::banHelp()
 {
 	m_help = false;
 	cancelhelp();
 }
-inline void ChessBoardLayer::lockBlock(int index,float time)
+void ChessBoard::lockBlock(int index,float time)
 {
-	m_blocks[index]->lock(time);
+	Blocks[index]->lock(time);
 }
-inline bool ChessBoardLayer::isLocked(int index)
+bool ChessBoard::isLocked(int index)
 {
-	return m_blocks[index] != NULL&&m_blocks[index]->isLocked();
+	return Blocks[index] != NULL&&Blocks[index]->isLocked();
 }
-inline bool ChessBoardLayer::isNULL(int index)
+bool ChessBoard::isNULL(int index)
 {
-	return m_blocks[index]==NULL;
+	return Blocks[index]==NULL;
 }
-inline int ChessBoardLayer::getBlockType(int index)
+int ChessBoard::getBlockType(int index)
 {
-	return m_blocks[index]->type;
+	return Blocks[index]->type;
 }
