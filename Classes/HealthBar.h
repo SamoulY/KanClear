@@ -2,26 +2,19 @@
 #define _HEALTHBAR_H_
 
 #include "cocos2d.h"
-#include "EventHandler.h"
+#include "KEvent.h"
 
 class Player;
 
-class HealthZeroEventArg
-{
-public:
-	HealthZeroEventArg()
-	{
-
-	}
-	~HealthZeroEventArg()
-	{
-
-	}
-};
 class HealthBar : public cocos2d::Sprite
 {
 public:
-	static HealthBar* create(int max, std::string& info = std::string(""));
+	static HealthBar* create(int max, std::string& info);
+	static HealthBar* create(int max)
+	{
+		auto arg = std::string("");
+		return HealthBar::create(max, arg);
+	}
 	virtual void updateHealth(int target);
 	virtual bool decreaseHealth(int target);
 	virtual bool increaseHealth(int target);
@@ -31,10 +24,14 @@ public:
 	}
 	virtual cocos2d::Point healthToPoint(int target)
 	{
+		if (m_max<=0)
+			return m_healthstrip->getPosition() + cocos2d::Point(0, m_healthmask->getContentSize().height / 4);
 		return m_healthstrip->getPosition() + cocos2d::Point(m_healthmask->getContentSize().width*target / m_max, m_healthmask->getContentSize().height / 4);
 	}	
 	virtual cocos2d::Point healthToPoint()
 	{
+		if (m_max <= 0)
+			return m_healthstrip->getPosition() + cocos2d::Point(0, m_healthmask->getContentSize().height / 4);
 		return m_healthstrip->getPosition() + cocos2d::Point(m_healthmask->getContentSize().width*m_current / m_max, m_healthmask->getContentSize().height / 4);
 	}
 	virtual void start(int target= -1);
@@ -43,7 +40,7 @@ public:
 	{
 		return m_healthbarinfo;
 	}
-	KEvent<HealthBar, HealthZeroEventArg> HealthZeroEvent;
+	KEvent<HealthBar, EventArg> HealthZeroEvent;
 protected:
 	cocos2d::ClippingNode* m_healthclip;
 	cocos2d::Sprite* m_healthstrip;

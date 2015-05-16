@@ -3,7 +3,7 @@
 
 
 #include "cocos2d.h"
-#include "EventHandler.h"
+#include "KEvent.h"
 
 class Block;
 class BlockClearEventArg

@@ -5,7 +5,7 @@
 
 class ChessBoard;
 class HealthBar;
-class HealthZeroEventArg;
+class EventArg;
 class Block;
 class BlockClearEventArg;
 class BattleLayer;
@@ -16,10 +16,6 @@ class SkillExcuteEventArg;
 class Player;
 class Icon;
 
-class BattleLayer :public cocos2d::Layer
-{
-
-};
 class BattleLayer_2P :public cocos2d::Layer
 {
 public:
@@ -62,12 +58,14 @@ protected:
 	cocos2d::Sprite* m_VSframe;
 
 	virtual void BlockClearedEventHandle(ChessBoard*, BlockClearEventArg*);
-	virtual void HealthZeroEventHandle(HealthBar*, HealthZeroEventArg*);
+	virtual void HealthZeroEventHandle(HealthBar*, EventArg*);
 	virtual void SkillExcuteEventHandle(SkillButton*, SkillExcuteEventArg*);
 	
 
 	virtual bool onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
 	virtual void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
+	virtual void onTouchEnded(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
+	virtual void onTouchCancelled(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
 };
 
 

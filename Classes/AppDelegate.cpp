@@ -1,6 +1,5 @@
 #include "AppDelegate.h"
-#include "GameLayer.h"
-#include "Player.h"
+#include "PortLayer.h"
 
 USING_NS_CC;
 
@@ -38,18 +37,13 @@ bool AppDelegate::applicationDidFinishLaunching() {
     director->setAnimationInterval(1.0 / 60);
 
     // create a scene. it's an autorelease object
-    //auto scene = MainMenuLayer::createScene();
 	auto scene = Scene::create();
-	Player* A = new Player(new SendaiKai2Character());
-	Player_AI* B = new Player_AI(new CruiserECharacter());
-	B->HardGrade = 3;
-	auto gameLayer = BattleLayer_2P::createWithPlayer(A,B);
-	scene->addChild(gameLayer);
-	gameLayer->setContentSize(director->getVisibleSize());
-    // run
+	MainPortLayer* layer;
+	scene->addChild(layer = MainPortLayer::create());
 	director->runWithScene(scene);
-	gameLayer->initLayout();
-	gameLayer->gameStart();
+	//layer->setContentSize(director->getVisibleSize());
+	//gameLayer->initLayout();
+	//gameLayer->gameStart();
     return true;
 }
 

@@ -7,6 +7,8 @@
 #include "SkillButton.h"
 #include "Icon.h"
 #include "Player.h"
+#include "Skills.h"
+#include "Ship.h"
 #include <cmath>
 
 using namespace cocos2d;
@@ -34,10 +36,6 @@ bool BattleLayer_2P::init()
 {
 	if (!Layer::init())
 		return false;
-	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("Resources/img/battleicon.plist", "Resources/img/battleicon.png");
-	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("Resources/img/attackanime.plist", "Resources/img/attackanime.png");
-	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("Resources/img/background.plist", "Resources/img/background.png");
-	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("Resources/img/spritesheet.plist", "Resources/img/spritesheet.png");
 	int i;
 	auto attackanime = Animation::create();
 	for (i =1; i <= 12; i++)
@@ -75,8 +73,8 @@ bool BattleLayer_2P::init()
 	addChild(m_VS = Sprite::createWithSpriteFrameName("VS.png"), 10);
 	addChild(m_VSframe = Sprite::createWithSpriteFrameName("Gear.png"), 9);
 
-	addChild(m_playerVDA = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerA->Name.c_str())->_string), 100);
-	addChild(m_playerVDB = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerB->Name.c_str())->_string), 100);
+	addChild(m_playerVDA = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerA->getShipType().c_str())->_string), 100);
+	addChild(m_playerVDB = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerB->getShipType().c_str())->_string), 100);
 
 	ClippingNode* cln;
 	Sprite* mask;
@@ -96,6 +94,9 @@ bool BattleLayer_2P::init()
 	auto touchlistener = EventListenerTouchOneByOne::create();
 	touchlistener->onTouchBegan = CC_CALLBACK_2(BattleLayer_2P::onTouchBegan, this);
 	touchlistener->onTouchMoved = CC_CALLBACK_2(BattleLayer_2P::onTouchMoved, this);
+	touchlistener->onTouchEnded = CC_CALLBACK_2(BattleLayer_2P::onTouchEnded, this);
+	touchlistener->onTouchCancelled = CC_CALLBACK_2(BattleLayer_2P::onTouchCancelled, this);
+
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchlistener, this);
 	return true;
 }
@@ -414,7 +415,7 @@ void BattleLayer_2P::BlockClearedEventHandle(ChessBoard* sender, BlockClearEvent
 	if (recoverblocks.size() > 0)
 		PlayerHeal(launcher, launcher, recoverblocks);
 }
-void BattleLayer_2P::HealthZeroEventHandle(HealthBar* sender, HealthZeroEventArg* arg)
+void BattleLayer_2P::HealthZeroEventHandle(HealthBar* sender, EventArg* arg)
 {
 	Player* loser;
 	Player* winner;
@@ -467,13 +468,15 @@ void BattleLayer_2P::HealthZeroEventHandle(HealthBar* sender, HealthZeroEventArg
 				tempS->runAction(Sequence::create(DelayTime::create(0.3*(i*eachexplosioncount + j)), CallFunc::create([tempS]{tempS->setVisible(true); }), Animate::create(AnimationCache::getInstance()->getAnimation("attack")), CallFunc::create([tempS]{tempS->removeFromParent(); }), NULL));
 			}
 		}
+	}), DelayTime::create(5), CallFunc::create([this]
+	{
+		Director::getInstance()->popScene();
 	}), NULL));
 }
 void BattleLayer_2P::SkillExcuteEventHandle(SkillButton* sender, SkillExcuteEventArg* arg)
 {
 	Player* skiller;
 	Player* target;
-	Sprite* temp;
 	if (sender == m_skillbuttonA)
 	{
 		skiller = m_playerA;
@@ -494,7 +497,7 @@ void BattleLayer_2P::SkillExcuteEventHandle(SkillButton* sender, SkillExcuteEven
 		m_playerVDB->runAction(Sequence::create(MoveTo::create(0.2, Point(_contentSize.width - m_playerVDB->getContentSize().width*m_playerVDB->getScale(), _contentSize.height)), DelayTime::create(0.6), MoveTo::create(0.2, Point(_contentSize.width, _contentSize.height)), NULL));
 		m_playerVDblinkB->runAction(Sequence::create(DelayTime::create(0.4), EaseSineIn::create(FadeIn::create(0.05)), FadeOut::create(0.2), NULL));
 	}
-	skiller->Skills[arg->index]->excute(skiller, target, this);
+	skiller->getSkills()[arg->index]->excute(skiller, target, this);
 }
 bool BattleLayer_2P::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_event)
 {
@@ -505,4 +508,14 @@ bool BattleLayer_2P::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_
 void BattleLayer_2P::onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused_event)
 {
 	m_controllerA->onTouchMoved(m_controllerA->convertTouchToNodeSpace(touch));
+	m_skillbuttonA->onTouchMoved(m_skillbuttonA->convertTouchToNodeSpace(touch));
+}
+
+void BattleLayer_2P::onTouchEnded(cocos2d::Touch *touch, cocos2d::Event *unused_event)
+{
+	m_skillbuttonA->onTouchEnded(m_skillbuttonA->convertTouchToNodeSpace(touch));
+}
+void BattleLayer_2P::onTouchCancelled(cocos2d::Touch *touch, cocos2d::Event *unused_event)
+{
+	m_skillbuttonA->onTouchCancelled(m_skillbuttonA->convertTouchToNodeSpace(touch));
 }
