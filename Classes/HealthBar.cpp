@@ -39,14 +39,6 @@ bool HealthBar::init(std::string& info)
 	scheduleUpdate();
 	return true;
 }
-void HealthBar::start(int target)
-{
-	m_current = 0;
-	if (target == -1)
-		updateHealth(m_max);
-	else
-		updateHealth(target);
-}
 void HealthBar::setInfo(std::string& info)
 {
 	m_healthbarinfo->setString(info);

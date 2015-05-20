@@ -3,7 +3,6 @@
 #include "CommanderInfoBar.h"
 #include "Commander.h"
 #include "GameLayer.h"
-#include "Player.h"
 #include "Ship.h"
 #include "Skills.h";
 
@@ -233,14 +232,8 @@ void MainPortLayer::attackbuttonClickedEventHandle(Button* sender, EventArg* arg
 {
 	auto scene = Scene::create();
 	auto director = Director::getInstance();
-	Player* A = new Player(m_commander->ships[m_commander->currentShip]);
-	Ship* target = ShipBuilder::newShip("CruiserE");
-	target->Skills.push_back(AS_FullSalvo::getInstance());
-	Player_AI* B = new Player_AI(target);
-	B->HardGrade = 3;
-	auto gameLayer = BattleLayer_2P::createWithPlayer(A,B);
+	auto gameLayer = BattleLayer_2P::createByOperation(1);
 	scene->addChild(gameLayer);
-	director->pushScene(scene);
-	gameLayer->initLayout();
+	director->pushScene(TransitionFade::create(0.5, scene));
 	gameLayer->gameStart();
 }

@@ -9,18 +9,94 @@
 #include "Player.h"
 #include "Skills.h"
 #include "Ship.h"
+#include "Stages.h"
+#include "Commander.h"
 #include <cmath>
+
+#define A_CONTROLLER_W 420
+#define A_CONTROLLER_H 372
+#define B_CONTROLLER_W 246
+#define B_CONTROLLER_H 218
+#define A_CONTROLLER_X 23
+#define A_CONTROLLER_Y 8
+#define B_CONTROLLER_X 506
+#define B_CONTROLLER_Y 161
+#define B_HPBAR_X _contentSize.width
+#define B_HPBAR_Y _contentSize.height
+#define B_ICON_X _contentSize.width
+#define B_ICON_Y _contentSize.height
+#define B_SKILLBUTTON_X (B_CONTROLLER_X + B_CONTROLLER_W)
+#define B_SKILLBUTTON_Y (B_CONTROLLER_Y + B_CONTROLLER_H / 2)
+#define B_VD_X _contentSize.width
+#define B_VD_Y _contentSize.height
+#define STAGECHANGEOFFSET (_contentSize.width/2)
 
 using namespace cocos2d;
 
+
+class BattleVerticalDraw:public cocos2d::Sprite
+{
+public:
+	void splash(float time);
+	static BattleVerticalDraw* create(const std::string& shiptype);
+
+protected:
+	bool init(const std::string& shiptype);
+	BattleVerticalDraw(){};
+	std::string m_picname;
+	cocos2d::Layer* m_blink;
+	cocos2d::ClippingNode* m_clip;
+	cocos2d::Sprite* m_mask;
+};
+BattleVerticalDraw* BattleVerticalDraw::create(const std::string& shiptype)
+{
+	BattleVerticalDraw* vd = new BattleVerticalDraw();
+	if (vd != 0 && vd->init(shiptype))
+	{
+		vd->autorelease();
+	}
+	else
+	{
+		delete vd;
+		vd = 0;
+	}
+	return vd;
+}
+bool BattleVerticalDraw::init(const std::string& shiptype)
+{
+	if (!initWithSpriteFrameName(String::createWithFormat("%sVD.png", shiptype.c_str())->_string))
+		return false;
+	setOpacity(230);
+	addChild(m_clip = ClippingNode::create());
+	m_clip->setStencil(m_mask = Sprite::createWithSpriteFrame(getSpriteFrame()));
+	m_mask->setAnchorPoint(Point(0, 0));
+	m_clip->setAlphaThreshold(0);
+	m_clip->addChild(m_blink = CCLayerColor::create(Color4B(255, 255, 255, 255), _contentSize.width, _contentSize.height));
+	m_blink->setOpacity(0);
+	return true;
+}
+void BattleVerticalDraw::splash(float dt)
+{
+	m_blink->stopAllActions();
+	m_blink->runAction(Sequence::create(EaseSineIn::create(FadeIn::create(dt*0.2)), FadeOut::create(dt*0.8), NULL));
+}
+
 void BattleLayer_2P::gameStart()
 {
-	m_playerA->gameStart();
-	m_playerB->gameStart();
+	m_transmaskt->setPosition(_contentSize.width / 2, _contentSize.height);
+	m_transmaskb->setPosition(_contentSize.width / 2, 0);
+	m_transtextbg->setPosition(_contentSize / 2);
+	Commander* com = Commander::getInstance();
+	addPlayerA(new Player(com->ships[com->currentShip]));
+	m_transtextbg->setScaleY(0);
+	m_transtextbg->runAction(Sequence::create(DelayTime::create(0.3), ScaleTo::create(0.2, 1), DelayTime::create(1.5), ScaleTo::create(0.2, 1,0),Hide::create(), NULL));
+	m_transmaskt->runAction(Sequence::create(DelayTime::create(2), MoveBy::create(0.5, Point(0, m_transmaskt->getContentSize().height)), NULL));
+	m_transmaskb->runAction(Sequence::create(DelayTime::create(2), MoveBy::create(0.5, Point(0, -m_transmaskb->getContentSize().height)), NULL));
+	runAction(Sequence::create(DelayTime::create(2.5), CallFunc::create(std::bind(&BattleLayer_2P::nextstage,this)), NULL));
 }
-BattleLayer_2P* BattleLayer_2P::createWithPlayer(Player* A, Player* B)
+BattleLayer_2P* BattleLayer_2P::createByOperation(int operationcode)
 {
-	BattleLayer_2P* gl = new BattleLayer_2P(A,B);
+	BattleLayer_2P* gl = new BattleLayer_2P(operationcode);
 	if (gl&&gl->init())
 	{
 		gl->autorelease();
@@ -36,6 +112,8 @@ bool BattleLayer_2P::init()
 {
 	if (!Layer::init())
 		return false;
+	if ((m_operation = OperationFactory::getOperation(m_operationcode)) == 0)
+		return false;
 	int i;
 	auto attackanime = Animation::create();
 	for (i =1; i <= 12; i++)
@@ -50,47 +128,13 @@ bool BattleLayer_2P::init()
 	AnimationCache::getInstance()->addAnimation(attackanime, "attack");
 	
 
-	addChild(m_controllerA = m_playerA->getChessBoard(),3);
-	m_controllerA->blockClearEvent += std::bind(&BattleLayer_2P::BlockClearedEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	addChild(m_controllerB = m_playerB->getChessBoard(), 3); 
-	m_controllerB->blockClearEvent += std::bind(&BattleLayer_2P::BlockClearedEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	addChild(m_hpbarA = m_playerA->getHealthBar(),5);
-	m_hpbarA->HealthZeroEvent += std::bind(&BattleLayer_2P::HealthZeroEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	addChild(m_hpbarB = m_playerB->getHealthBar(), 5);
-	m_hpbarB->HealthZeroEvent += std::bind(&BattleLayer_2P::HealthZeroEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	addChild(m_playerIconA = m_playerA->getIcon(), 10);
-	addChild(m_playerIconB = m_playerB->getIcon(), 10);
-	addChild(m_healworkerA = m_playerA->getHealWorker(), 11);
-	addChild(m_healworkerB = m_playerB->getHealWorker(), 11);
-	addChild(m_skillbuttonA = m_playerA->getSkillButton(), 5);
-	m_skillbuttonA->SkillExcuteEvent += std::bind(&BattleLayer_2P::SkillExcuteEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	addChild(m_skillbuttonB = m_playerB->getSkillButton(), 5);
-	m_skillbuttonB->SkillExcuteEvent += std::bind(&BattleLayer_2P::SkillExcuteEventHandle, this, std::placeholders::_1, std::placeholders::_2);
-	
-	addChild(m_bankA = m_playerA->getCoinBank(), 20);
-
-	addChild(m_background = Sprite::createWithSpriteFrameName("battlemain.png"),0);
+	addChild(m_background = Sprite::createWithSpriteFrameName("battlemain.png"), 0);
 	addChild(m_VS = Sprite::createWithSpriteFrameName("VS.png"), 10);
 	addChild(m_VSframe = Sprite::createWithSpriteFrameName("Gear.png"), 9);
+	addChild(m_transmaskt = Sprite::createWithSpriteFrameName("battletranmask_t.png"), 100);
+	addChild(m_transmaskb = Sprite::createWithSpriteFrameName("battletranmask_b.png"), 99);
+	addChild(m_transtextbg = Sprite::createWithSpriteFrameName("battletrantextbg.png"), 101);
 
-	addChild(m_playerVDA = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerA->getShipType().c_str())->_string), 100);
-	addChild(m_playerVDB = Sprite::createWithSpriteFrameName(String::createWithFormat("%sVD.png", m_playerB->getShipType().c_str())->_string), 100);
-
-	ClippingNode* cln;
-	Sprite* mask;
-	m_playerVDA->setOpacity(230);
-	m_playerVDA->addChild(cln = ClippingNode::create());
-	cln->setStencil(mask = Sprite::createWithSpriteFrame(m_playerVDA->getSpriteFrame()));
-	mask->setAnchorPoint(Point(0, 0));
-	cln->setAlphaThreshold(0);
-	cln->addChild(m_playerVDblinkA = CCLayerColor::create(Color4B(255, 255, 255, 255), m_playerVDA->getContentSize().width, m_playerVDA->getContentSize().height));
-	m_playerVDB->setOpacity(230);
-	m_playerVDB->addChild(cln = ClippingNode::create());
-	cln->setStencil(mask = Sprite::createWithSpriteFrame(m_playerVDB->getSpriteFrame()));
-	mask->setAnchorPoint(Point(0, 0));
-	cln->setAlphaThreshold(0);
-	cln->addChild(m_playerVDblinkB = CCLayerColor::create(Color4B(255, 255, 255, 255), m_playerVDB->getContentSize().width, m_playerVDB->getContentSize().height));
-	
 	auto touchlistener = EventListenerTouchOneByOne::create();
 	touchlistener->onTouchBegan = CC_CALLBACK_2(BattleLayer_2P::onTouchBegan, this);
 	touchlistener->onTouchMoved = CC_CALLBACK_2(BattleLayer_2P::onTouchMoved, this);
@@ -98,66 +142,140 @@ bool BattleLayer_2P::init()
 	touchlistener->onTouchCancelled = CC_CALLBACK_2(BattleLayer_2P::onTouchCancelled, this);
 
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchlistener, this);
+	_eventDispatcher->pauseEventListenersForTarget(this);
+
+
+	m_background->setPosition(_contentSize / 2);
+	m_VS->setPosition(_contentSize.width / 2, _contentSize.height-32);
+	m_VSframe->setPosition(m_VS->getPosition());
+	if (m_VSframe->getNumberOfRunningActions() == 0)
+		m_VSframe->runAction(RepeatForever::create(RotateBy::create(36, 360)));
+
+	m_transmaskt->setAnchorPoint(Point(0.5, 1));
+	m_transmaskb->setAnchorPoint(Point(0.5, 0));
 	return true;
 }
-void BattleLayer_2P::initLayout()
+void BattleLayer_2P::changestage(int index)
 {
-	m_background->setPosition(_contentSize/2);
+	if (m_currentstage != 0)
+		delete m_currentstage;
+	m_currentstage = StageFactory::getStage(m_operationcode, index);
+	m_currrentstageindex = index;
+	addPlayerB(m_currentstage->getEnemy());
+	Action* stagechangeaction_playerb = Sequence::create(DelayTime::create(2.5), EaseSineOut::create(MoveBy::create(0.7, Point(-STAGECHANGEOFFSET, 0))), NULL);
+	m_playerIconB->runAction(stagechangeaction_playerb->clone());
+	m_controllerB->runAction(stagechangeaction_playerb->clone());
+	m_skillbuttonB->runAction(stagechangeaction_playerb->clone());
+	m_hpbarB->runAction(stagechangeaction_playerb->clone());
+
+	Sprite* temp = Sprite::createWithSpriteFrameName("battlesearchcircle.png");
+	addChild(temp);
+	temp->setScale(0);
+	temp->setPosition(Point(_contentSize) - Point(30, 30));
+	temp->runAction(Sequence::create(DelayTime::create(0.4), Spawn::create(ScaleTo::create(1, 1),EaseSineIn::create(FadeOut::create(1)),NULL), CallFunc::create(std::bind(&Sprite::removeFromParent, temp)), NULL));
+	temp = Sprite::createWithSpriteFrameName("battlesearchcircle.png");
+	addChild(temp);
+	temp->setScale(0);
+	temp->setPosition(Point(_contentSize) - Point(90, 60));
+	temp->runAction(Sequence::create(DelayTime::create(0.8), Spawn::create(ScaleTo::create(1, 1), EaseSineIn::create(FadeOut::create(1)), NULL), CallFunc::create(std::bind(&Sprite::removeFromParent, temp)), NULL));
+	temp = Sprite::createWithSpriteFrameName("battlesearchcircle.png");
+	addChild(temp);
+	temp->setScale(0);
+	temp->setPosition(Point(_contentSize) - Point(150, 45));
+	temp->runAction(Sequence::create(DelayTime::create(1.2), Spawn::create(ScaleTo::create(1, 1), EaseSineIn::create(FadeOut::create(1)), NULL), CallFunc::create(std::bind(&Sprite::removeFromParent, temp)), NULL));
+	runAction(Sequence::create(DelayTime::create(3), CallFunc::create(std::bind(&BattleLayer_2P::stagestart,this)),NULL));
+}
+
+void BattleLayer_2P::stagestart()
+{
+	m_playerA->gameStart();
+	m_playerB->gameStart();
+	_eventDispatcher->resumeEventListenersForTarget(this);
+}
+void BattleLayer_2P::addPlayerA(Player* a)
+{
+	m_playerA = a;
+	addChild(m_controllerA = m_playerA->getChessBoard(), 3);
+	m_controllerA->blockClearEvent += std::bind(&BattleLayer_2P::BlockClearedEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+	addChild(m_hpbarA = m_playerA->getHealthBar(), 5);
+	m_hpbarA->HealthZeroEvent += std::bind(&BattleLayer_2P::HealthZeroEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+	addChild(m_playerIconA = m_playerA->getIcon(), 10);
+	addChild(m_healworkerA = m_playerA->getHealWorker(), 11);
+	addChild(m_skillbuttonA = m_playerA->getSkillButton(), 5);
+	m_skillbuttonA->SkillExcuteEvent += std::bind(&BattleLayer_2P::SkillExcuteEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+	addChild(m_bankA = m_playerA->getCoinBank(), 20);
+	addChild(m_playerVDA = BattleVerticalDraw::create(m_playerA->getShipType()), 95);
 	m_hpbarA->setAnchorPoint(Point(0, 1));
-	m_hpbarA->setPosition(0, _contentSize.height);
+	m_hpbarA->setPosition(0, _contentSize.height); 
+	m_playerIconA->setAnchorPoint(Point(0, 1));
+	m_playerIconA->setPosition(0, _contentSize.height);
+	m_healworkerA->setAnchorPoint(Point(0, 0));
+	m_healworkerA->setOriginPosion(-m_healworkerA->getContentSize().width, convertToNodeSpace(m_hpbarA->convertToWorldSpace(m_hpbarA->healthToPoint(0))).y, true);
+	m_controllerA->setContentSize(Size(A_CONTROLLER_W, A_CONTROLLER_H));
+	m_controllerA->setAnchorPoint(Point(0, 0));
+	m_controllerA->setPosition(A_CONTROLLER_X, A_CONTROLLER_Y);
+	m_controllerA->refreshBackGround();
+	m_bankA->setAnchorPoint(Point(0, 0));
+	m_bankA->setPosition(A_CONTROLLER_W + A_CONTROLLER_X + 10, A_CONTROLLER_Y);
+	m_bankA->setScale(0.7);
+	m_skillbuttonA->setPosition(B_CONTROLLER_X + B_CONTROLLER_W / 2, B_CONTROLLER_Y / 2);
+	m_skillbuttonA->setScale(0.8);
+	m_playerVDA->setScale(_contentSize.height / m_playerVDA->getContentSize().height);
+	m_playerVDA->setAnchorPoint(Point(1, 1));
+	m_playerVDA->setPosition(0, _contentSize.height);
+}
+void BattleLayer_2P::addPlayerB(Player* b)
+{
+	m_playerB = b;
+	addChild(m_controllerB = m_playerB->getChessBoard(), 3);
+	m_controllerB->blockClearEvent += std::bind(&BattleLayer_2P::BlockClearedEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+	addChild(m_hpbarB = m_playerB->getHealthBar(), 5);
+	m_hpbarB->HealthZeroEvent += std::bind(&BattleLayer_2P::HealthZeroEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+	addChild(m_playerIconB = m_playerB->getIcon(), 10);
+	addChild(m_healworkerB = m_playerB->getHealWorker(), 11);
+	addChild(m_skillbuttonB = m_playerB->getSkillButton(), 5);
+	addChild(m_playerVDB = BattleVerticalDraw::create(m_playerB->getShipType()), 95); 
+	m_skillbuttonB->SkillExcuteEvent += std::bind(&BattleLayer_2P::SkillExcuteEventHandle, this, std::placeholders::_1, std::placeholders::_2);
+
+
 	m_hpbarB->setAnchorPoint(Point(0, 1));
-	m_hpbarB->setPosition(_contentSize.width, _contentSize.height);
 	m_hpbarB->setScaleX(-1);
 	m_hpbarB->getInfoLabel()->setAnchorPoint(Point(0, 0.5));
 	m_hpbarB->getInfoLabel()->setScaleX(-1);
-	
-
-	m_playerIconA->setAnchorPoint(Point(0, 1));
-	m_playerIconA->setPosition(0, _contentSize.height);
 	m_playerIconB->setAnchorPoint(Point(1, 1));
-	m_playerIconB->setPosition(_contentSize.width, _contentSize.height);
-
-	m_healworkerA->setAnchorPoint(Point(0, 0));
-	m_healworkerA->setOriginPosion(-m_healworkerA->getContentSize().width, convertToNodeSpace(m_hpbarA->convertToWorldSpace(m_hpbarA->healthToPoint(0))).y,true);
 	m_healworkerB->setAnchorPoint(Point(0, 0));
 	m_healworkerB->setScaleX(-1);
-	m_healworkerB->setOriginPosion(_contentSize.width + m_healworkerA->getContentSize().width, convertToNodeSpace(m_hpbarA->convertToWorldSpace(m_hpbarA->healthToPoint(0))).y,true);
-	
-
-	m_VS->setPosition(_contentSize.width / 2, _contentSize.height- m_hpbarA->getContentSize().height / 2);
-	m_VSframe->setPosition(m_VS->getPosition());
-	if (m_VSframe->getNumberOfRunningActions()==0)
-		m_VSframe->runAction(RepeatForever::create(RotateBy::create(36, 360)));
-
-	int controllerAW = 420, controllerAH = 372, controllerBW = 246, controllerBH = 218,
-		controllerAX = 23, controllerAY = 8, controllerBX = 506, controllerBY = 161;
-	m_controllerA->setContentSize(Size(controllerAW, controllerAH));
-	m_controllerA->setAnchorPoint(Point(0, 0));
-	m_controllerB->setContentSize(Size(controllerBW, controllerBH));
+	m_healworkerB->setOriginPosion(_contentSize.width + m_healworkerA->getContentSize().width, convertToNodeSpace(m_hpbarA->convertToWorldSpace(m_hpbarA->healthToPoint(0))).y, true);
+	m_controllerB->setContentSize(Size(B_CONTROLLER_W, B_CONTROLLER_H));
 	m_controllerB->setAnchorPoint(Point(0, 0));
-	m_controllerA->setPosition(controllerAX, controllerAY);
-	m_controllerB->setPosition(controllerBX, controllerBY);
-	m_controllerA->refreshBackGround();
 	m_controllerB->refreshBackGround();
-
-	m_bankA->setAnchorPoint(Point(0, 0));
-	m_bankA->setPosition(controllerAW + controllerAX + 10, controllerAY);
-	m_bankA->setScale(0.7);
-
-	m_skillbuttonA->setPosition(controllerBX + controllerBW / 2, controllerBY / 2);
-	m_skillbuttonA->setScale(0.8);
-	m_skillbuttonB->setAnchorPoint(Point(0,0.5));
-	m_skillbuttonB->setPosition(controllerBX + controllerBW, controllerBY + controllerBH/2);
+	m_skillbuttonB->setAnchorPoint(Point(0, 0.5));
 	m_skillbuttonB->setScale(0.8);
-
-	m_playerVDA->setScale(_contentSize.height / m_playerVDA->getContentSize().height);
-	m_playerVDA->setAnchorPoint(Point(1, 1));
-	m_playerVDA->setPosition(0,_contentSize.height);
 	m_playerVDB->setScale(_contentSize.height / m_playerVDB->getContentSize().height);
 	m_playerVDB->setAnchorPoint(Point(0, 1));
-	m_playerVDB->setPosition(_contentSize.width, _contentSize.height);
-}
 
+
+	m_hpbarB->setPosition(B_HPBAR_X+STAGECHANGEOFFSET,B_HPBAR_Y);
+	m_playerIconB->setPosition(B_ICON_X + STAGECHANGEOFFSET, B_ICON_Y);
+	m_controllerB->setPosition(B_CONTROLLER_X + STAGECHANGEOFFSET, B_CONTROLLER_Y);
+	m_skillbuttonB->setPosition(B_SKILLBUTTON_X + STAGECHANGEOFFSET, B_SKILLBUTTON_Y);
+	m_playerVDB->setPosition(B_VD_X,B_VD_Y);
+}
+void BattleLayer_2P::removePlayerB()
+{
+	if (m_playerB != 0)
+	{
+		m_controllerB->removeFromParent();
+		m_hpbarB->removeFromParent();
+		m_bankB->removeFromParent();
+		m_healworkerB->removeFromParent();
+		m_skillbuttonB->removeFromParent();
+		m_playerIconB->removeFromParent();
+		m_playerVDB->removeFromParent();
+		delete m_playerB;
+		m_playerB = 0;
+	}
+}
 void BattleLayer_2P::PlayerAttack(Player* attacker, Player* target, std::vector<Block*>& blocks)
 {
 	Sprite* temp;
@@ -430,8 +548,8 @@ void BattleLayer_2P::HealthZeroEventHandle(HealthBar* sender, EventArg* arg)
 		loser = m_playerB;
 	}
 	_eventDispatcher->pauseEventListenersForTarget(this);
-	winner->gameWin();
-	loser->gameOver();
+	winner->gameStop();
+	loser->gameStop();
 	runAction(Sequence::create(DelayTime::create(0.5), CallFunc::create([winner, loser]{
 		auto losercontroller = loser->getChessBoard();
 		auto losericon = loser->getIcon();
@@ -477,25 +595,22 @@ void BattleLayer_2P::SkillExcuteEventHandle(SkillButton* sender, SkillExcuteEven
 {
 	Player* skiller;
 	Player* target;
+	BattleVerticalDraw* skillervd;
 	if (sender == m_skillbuttonA)
 	{
 		skiller = m_playerA;
 		target = m_playerB;
+		skillervd = m_playerVDA;
 		m_playerVDA->stopAllActions();
-		m_playerVDblinkA->stopAllActions();
-		m_playerVDblinkA->setOpacity(0);
-		m_playerVDA->runAction(Sequence::create(MoveTo::create(0.2, Point(m_playerVDA->getContentSize().width*m_playerVDA->getScale(), _contentSize.height)), DelayTime::create(0.6), MoveTo::create(0.2, Point(0, _contentSize.height)), NULL));
-		m_playerVDblinkA->runAction(Sequence::create(DelayTime::create(0.4), EaseSineIn::create(FadeIn::create(0.05)), FadeOut::create(0.2), NULL));
+		m_playerVDA->runAction(Sequence::create(MoveTo::create(0.2, Point(m_playerVDA->getContentSize().width*m_playerVDA->getScale(), _contentSize.height)), DelayTime::create(0.2), CallFunc::create([skillervd]{skillervd->splash(0.25); }), DelayTime::create(0.4), MoveTo::create(0.2, Point(0, _contentSize.height)), NULL));
 	}
 	else
 	{
 		skiller = m_playerB;
 		target = m_playerA; 
+		skillervd = m_playerVDB;
 		m_playerVDB->stopAllActions();
-		m_playerVDblinkB->stopAllActions();
-		m_playerVDblinkB->setOpacity(0);
-		m_playerVDB->runAction(Sequence::create(MoveTo::create(0.2, Point(_contentSize.width - m_playerVDB->getContentSize().width*m_playerVDB->getScale(), _contentSize.height)), DelayTime::create(0.6), MoveTo::create(0.2, Point(_contentSize.width, _contentSize.height)), NULL));
-		m_playerVDblinkB->runAction(Sequence::create(DelayTime::create(0.4), EaseSineIn::create(FadeIn::create(0.05)), FadeOut::create(0.2), NULL));
+		m_playerVDB->runAction(Sequence::create(MoveTo::create(0.2, Point(_contentSize.width - m_playerVDB->getContentSize().width*m_playerVDB->getScale(), _contentSize.height)), DelayTime::create(0.2), CallFunc::create([skillervd]{skillervd->splash(0.25); }), DelayTime::create(0.4), MoveTo::create(0.2, Point(_contentSize.width, _contentSize.height)), NULL));
 	}
 	skiller->getSkills()[arg->index]->excute(skiller, target, this);
 }

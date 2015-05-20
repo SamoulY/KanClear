@@ -8,31 +8,39 @@ class HealthBar;
 class EventArg;
 class Block;
 class BlockClearEventArg;
-class BattleLayer;
 class CoinBank;
 class HealWorker;
 class SkillButton;
 class SkillExcuteEventArg;
 class Player;
 class Icon;
+class Operation;
+class Stage;
+class BattleVerticalDraw;
 
 class BattleLayer_2P :public cocos2d::Layer
 {
 public:
-	static BattleLayer_2P* createWithPlayer(Player*, Player*);
-	void initLayout();
+	static BattleLayer_2P* createByOperation(int operationcode);
 	virtual void gameStart();	
 	virtual void PlayerAttack(Player* attacker, Player* target, std::vector<Block*>& blocks);
 	virtual void PlayerLock(Player* locker, Player* target, std::vector<Block*>& blocks);
 	virtual void PlayerGetCoin(Player* target, std::vector<Block*>& blocks);
 	virtual void PlayerGetMana(Player* manar, Player* target, std::vector<Block*>& blocks);
 	virtual void PlayerHeal(Player* healer, Player* target, std::vector<Block*>& blocks);
+	virtual void addPlayerA(Player* a);
+	virtual void addPlayerB(Player* b);
 protected:
-	BattleLayer_2P(Player* A, Player* B) :m_playerA(A), m_playerB(B), m_background(0), m_VS(0), m_VSframe(0)
+	BattleLayer_2P(int operationcode) :m_operationcode(operationcode), m_operation(0), m_currentstage(0), m_currrentstageindex(-1), m_playerA(0), m_playerB(0)
 	{
 	}	
+	~BattleLayer_2P(){};
 	virtual bool init() override;
 
+	int m_operationcode;
+	Operation* m_operation;
+	int m_currrentstageindex;
+	Stage* m_currentstage;
 
 	Player* m_playerA;
 	Player* m_playerB;
@@ -47,20 +55,30 @@ protected:
 	SkillButton* m_skillbuttonA;
 	SkillButton* m_skillbuttonB;
 
-	cocos2d::Sprite* m_playerVDA;
-	cocos2d::Layer* m_playerVDblinkA;
-	cocos2d::Sprite* m_playerVDB;
-	cocos2d::Layer* m_playerVDblinkB;
-	cocos2d::Sprite* m_background;
+	BattleVerticalDraw* m_playerVDA;
+	BattleVerticalDraw* m_playerVDB;
 	cocos2d::Sprite* m_playerIconA;
 	cocos2d::Sprite* m_playerIconB;
+
+	cocos2d::Sprite* m_background;
 	cocos2d::Sprite* m_VS;
 	cocos2d::Sprite* m_VSframe;
+	cocos2d::Sprite* m_transmaskt;
+	cocos2d::Sprite* m_transmaskb;
+	cocos2d::Sprite* m_transtextbg;
+
+
+	virtual void changestage(int index);
+	virtual void nextstage()
+	{
+		changestage(m_currrentstageindex+1);
+	}
+	virtual void removePlayerB();
+	virtual void stagestart();
 
 	virtual void BlockClearedEventHandle(ChessBoard*, BlockClearEventArg*);
 	virtual void HealthZeroEventHandle(HealthBar*, EventArg*);
 	virtual void SkillExcuteEventHandle(SkillButton*, SkillExcuteEventArg*);
-	
 
 	virtual bool onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;
 	virtual void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *unused_event) override;

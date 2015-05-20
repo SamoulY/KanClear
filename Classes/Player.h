@@ -23,11 +23,9 @@ public:
 	int attacking;
 	bool healthlocked;
 	Player(Ship* c);
+	virtual ~Player();
 	virtual void gameStart();
-	virtual void gameOver();
-	virtual void gameWin();
 	virtual void gameStop();
-	virtual void gameResume();
 	virtual HealthBar* getHealthBar();
 	virtual ChessBoard* getChessBoard();
 	virtual Icon* getIcon();
@@ -74,14 +72,19 @@ protected:
 class Player_AI :public Player
 {
 public:
-	Player_AI(Ship* c) :Player(c), HardGrade(1), m_currentschedule(0)
+	Player_AI(Ship* c, int hardgrade = 1) :Player(c), m_hardgrade(hardgrade), m_currentschedule(0)
 	{
 
 	}
+	~Player_AI();
 	virtual void gameStart();
 	virtual SkillButton* getSkillButton() override;
-	float HardGrade;
+	int getHardGrade()
+	{
+		return m_hardgrade;
+	}
 protected:
+	int m_hardgrade;
 	int m_currentschedule;
 	virtual void move(float dt);
 };

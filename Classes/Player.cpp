@@ -14,52 +14,35 @@ using namespace cocos2d;
 Player::Player(Ship* c) :m_ship(c), m_controller(0), m_hpbar(0), m_icon(0), m_healworker(0), m_skillbutton(0), m_coinbank(0), attacking(0), healthlocked(false)
 {
 }
+Player::~Player()
+{
+
+}
 void Player::gameStart()
 {
-	if (m_hpbar != NULL)
+	healthlocked = false;
+	if (m_hpbar->getCurrentHealth() == -1)
 	{
 		m_hpbar->updateHealth(m_ship->Hp);
-		m_hpbar->start();
-	}
-	if (m_controller != NULL)
-	{
 		m_controller->allowHelp(3);
 		m_controller->start();
 	}
-}
-void Player::gameOver()
-{
-	healthlocked = true;
-	if (m_controller != NULL)
+	else if (m_controller != NULL)
 	{
-		m_controller->unscheduleUpdate();
-		m_controller->unscheduleAllCallbacks();
+		m_controller->scheduleUpdate();
 	}
+
 }
-void Player::gameWin()
-{
-	healthlocked = true;
-	if (m_controller != NULL)
-	{
-		m_controller->pause();
-	}
-}
+
 void Player::gameStop()
 {
 	healthlocked = true;
 	if (m_controller != NULL)
 	{
-		m_controller->pause();
+		m_controller->unscheduleAllCallbacks();
 	}
 }
-void Player::gameResume()
-{
-	healthlocked = false;
-	if (m_controller != NULL)
-	{
-		m_controller->resume();
-	}
-}
+
 HealthBar* Player::getHealthBar()
 {
 	return m_hpbar == NULL ? m_hpbar = HealthBar::create(m_ship->Hp, CCString::createWithFormat("%s  LV %d", m_ship->shipdisplayname.c_str(), m_ship->Level)->_string) : m_hpbar;
@@ -91,17 +74,24 @@ SkillButton* Player_AI::getSkillButton()
 }
 void Player_AI::gameStart()
 {
+	healthlocked = false;
 	srand(time(NULL));
-	m_hpbar->updateHealth(m_ship->Hp);
 	if (m_controller->isScheduled("moveai0"))
 		m_controller->unschedule("moveai0");
 	if (m_controller->isScheduled("moveai1"))
 		m_controller->unschedule("moveai1");
-	float time = HardGrade*(1 + random(-0.2, 0.2));
+	float time = m_hardgrade*(1 + random(-0.2, 0.2));
 	m_currentschedule = (m_currentschedule + 1) % 2;
-	m_controller->scheduleOnce(std::bind(&Player_AI::move, this, std::placeholders::_1), time<1 ? 1 : time, "moveai" + m_currentschedule);
-	m_hpbar->start();
-	m_controller->start();
+	m_controller->scheduleOnce(std::bind(&Player_AI::move, this, std::placeholders::_1), time < 1 ? 1 : time, "moveai" + m_currentschedule);
+	if (m_hpbar->getCurrentHealth() == -1)
+	{
+		m_hpbar->updateHealth(m_ship->Hp);
+		m_controller->start();
+	}
+	else
+	{
+		m_controller->resume();
+	}
 }
 void Player_AI::move(float dt)
 {
@@ -125,7 +115,7 @@ void Player_AI::move(float dt)
 	{
 		m_controller->pressBlock(keyindex);
 
-		float time = HardGrade*(1 + random(-0.2, 0.2));
+		float time = m_hardgrade*(1 + random(-0.2, 0.2));
 		m_currentschedule = (m_currentschedule + 1) % 2;
 		m_controller->scheduleOnce(std::bind(&Player_AI::move, this, std::placeholders::_1), time<1 ? 1 : time, "moveai" + m_currentschedule);
 		return;
@@ -188,7 +178,11 @@ void Player_AI::move(float dt)
 	{
 		m_controller->trySwap(max_1, max_2);
 	}
-	float time = HardGrade*(1 + random(-0.2, 0.2));
+	float time = m_hardgrade*(1 + random(-0.2, 0.2));
 	m_currentschedule = (m_currentschedule + 1) % 2;
 	m_controller->scheduleOnce(std::bind(&Player_AI::move, this, std::placeholders::_1), time<1 ? 1 : time, "moveai" + m_currentschedule);
+}
+Player_AI::~Player_AI()
+{
+	delete m_ship;
 }

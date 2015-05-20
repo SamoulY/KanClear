@@ -34,7 +34,6 @@ public:
 			return m_healthstrip->getPosition() + cocos2d::Point(0, m_healthmask->getContentSize().height / 4);
 		return m_healthstrip->getPosition() + cocos2d::Point(m_healthmask->getContentSize().width*m_current / m_max, m_healthmask->getContentSize().height / 4);
 	}
-	virtual void start(int target= -1);
 	virtual void setInfo(std::string& info);
 	virtual cocos2d::Label* getInfoLabel()
 	{
@@ -49,10 +48,9 @@ protected:
 	cocos2d::Label* m_healthbarinfo;
 	int m_max;
 	int m_current;
-	int m_temp;
 	virtual bool init(std::string& info);
 	virtual void update(float dt) override;
-	HealthBar(int max) :m_max(max), m_current(max), m_temp(max), m_healthbarinfo(0), HealthZeroEvent(this)
+	HealthBar(int max) :m_max(max), m_current(-1), m_healthbarinfo(0), HealthZeroEvent(this)
 	{
 
 	}
